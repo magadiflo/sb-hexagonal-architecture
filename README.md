@@ -169,3 +169,110 @@ public class StudentNotFoundException extends RuntimeException {
     }
 }
 ````
+
+---
+
+# APPLICATION
+
+---
+
+En la capa de aplicación crearemos los puertos de entrada `(input)` y de salida `(output)`, además **crearemos la
+implementación del puerto de entrada (service) que a su vez hará uso del puerto de salida (como inyección de
+dependencia).**
+
+## Puerto de entrada (input)
+
+Esta interfaz contendrá operaciones que se pueden hacer con el modelo de dominio Student. Aquí detallamos la
+funcionalidad de la aplicación.
+
+Para nuestro proyecto, aquí definimos los métodos `CRUD`:
+
+````java
+public interface StudentServicePort {
+    List<Student> findAllStudents();
+
+    Student findStudentById(Long id);
+
+    Student saveStudent(Student student);
+
+    Student updateStudent(Long id, Student student);
+
+    void deleteStudentById(Long id);
+}
+````
+
+## Puerto de salida (output)
+
+Aquí definimos los métodos necesarios que permitirán **interactuar** con la parte externa, **con la parte de
+persistencia.** Puede haber distintos puertos de salida, por ejemplo, si se quiere mandar hacia una cola de mensajes.
+
+Los métodos siguientes se utilizarán para almacenar los objetos de dominio, es por eso que aquí no declaramos el método
+update, ya que será realizado por el método save.
+
+````java
+public interface StudentPersistentPort {
+    List<Student> findAllStudents();
+
+    Optional<Student> findStudentById(Long id);
+
+    Student saveStudent(Student student);
+
+    void deleteStudentById(Long id);
+}
+````
+
+## Implementación del puerto de entrada (Servicio)
+
+El servicio de la capa de aplicación implementa el puerto de entrada y hace uso del puerto de salida. En otras palabras,
+aquí estamos definiendo la implementación del puerto de entrada (StudentServicePor) y además, estamos inyectando una
+futura implementación del puerto de salida (StudentPersistentPort) y digo **"futura implementación"** puesto que lo que
+realmente estamos usando es el puerto de salida (interfaz StudentPersistentPort) que en tiempo de ejecución tomará
+una implementación concreta.
+
+````java
+
+@RequiredArgsConstructor
+@Service
+public class StudentService implements StudentServicePort {
+
+    private final StudentPersistentPort studentPersistentPort;
+
+    @Override
+    public List<Student> findAllStudents() {
+        return this.studentPersistentPort.findAllStudents();
+    }
+
+    @Override
+    public Student findStudentById(Long id) {
+        return this.studentPersistentPort.findStudentById(id)
+                .orElseThrow(() -> new StudentNotFoundException("Error al buscar estudiante. No se encuentra con id: %s".formatted(id)));
+    }
+
+    @Override
+    public Student saveStudent(Student student) {
+        return this.studentPersistentPort.saveStudent(student);
+    }
+
+    @Override
+    public Student updateStudent(Long id, Student student) {
+        return this.studentPersistentPort.findStudentById(id)
+                .map(studentDB -> {
+                    studentDB.setFirstName(student.getFirstName());
+                    studentDB.setLastName(student.getLastName());
+                    studentDB.setAge(student.getAge());
+                    studentDB.setAddress(student.getAddress());
+                    return studentDB;
+                })
+                .map(this.studentPersistentPort::saveStudent)
+                .orElseThrow(() -> new StudentNotFoundException("Error al actualizar estudiante. No se encuentra con id: %s".formatted(id)));
+    }
+
+    @Override
+    public void deleteStudentById(Long id) {
+        if (this.studentPersistentPort.findStudentById(id).isEmpty()) {
+            throw new StudentNotFoundException("Error al eliminar estudiante. No se encuentra con id: %s".formatted(id));
+        }
+        this.studentPersistentPort.deleteStudentById(id);
+    }
+}
+````
