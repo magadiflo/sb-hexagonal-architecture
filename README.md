@@ -318,7 +318,7 @@ public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
 }
 ````
 
-## Mapper
+## Mapeando: dominio - entidad
 
 Recordemos que en el `pom.xml` hemos agregado la dependencia del `mapstruct`, esta dependencia nos permitirá establecer
 el mapeo entre el dominio y las clases de entidad. Así que ahora necesitamos crear una interfaz al que le
@@ -386,3 +386,141 @@ public class StudentPersistentAdapter implements StudentPersistentPort {
     }
 }
 ````
+
+## Modelo de request
+
+Crearemos un `DTO` que nos permitirá mapear la información enviada desde el cliente hacia en el endpoint rest. Este
+dto se usará tanto en el endpoint para guardar y actualizar.
+
+Notar que en este `DTO` estamos estableciendo las anotaciones de validación. Estas anotaciones se activarán cuando
+en el parámetro del método que use el dto usemos la anotación `@Valid`.
+
+````java
+
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentCreateRequest {
+    @NotBlank(message = "El campo firstName no puede estar vacío o ser nulo")
+    private String firstName;
+
+    @NotBlank(message = "El campo lastName no puede estar vacío o ser nulo")
+    private String lastName;
+
+    @NotNull(message = "El campo age no puede ser nulo")
+    private Integer age;
+
+    @NotBlank(message = "El campo address no puede estar vacío o ser nulo")
+    private String address;
+}
+````
+
+## Modelo de response
+
+Este `DTO` se usará para enviar información desde el backend hacia el cliente http.
+
+````java
+
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+public class StudentResponse {
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private Integer age;
+    private String address;
+}
+````
+
+## Mapeando: dominio - dto
+
+`unmappedTargetPolicy = ReportingPolicy.IGNORE`: Esta configuración indica a `MapStruct` que ignore las propiedades
+de destino que no están mapeadas explícitamente en el mapper. Esto evita que se generen advertencias en tiempo de
+compilación por propiedades no mapeadas.
+
+Tomemos como ejemplo el siguiente método:
+
+````java
+Student toStudent(StudentCreateRequest request);
+````
+
+Si en el campo de destino `(Student)` existe un atributo que no hay en clase de origen `(StudentCreateRequest)`, con la
+configuración `unmappedTargetPolicy = ReportingPolicy.IGNORE`, ignoramos que se haga el mapeo de ese campo de destino.
+
+En nuestro ejemplo, el modelo de dominio `Student` tiene un atributo llamado `id` que no tiene la clase de origen
+`StudentCreateRequest`, por lo tanto, con la configuración anterior, **el mapeo de ese campo se va a ignorar.**
+
+````java
+
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
+public interface StudentRestMapper {
+    Student toStudent(StudentCreateRequest request);
+
+    StudentResponse toStudentResponse(Student student);
+
+    List<StudentResponse> toStudentResponseList(List<Student> students);
+}
+````
+
+## Adapter Input Rest: StudentRestAdapter
+
+En esta clase definimos los endpoints de nuestros estudiantes. Observar que en los endpoints estamos regresando siempre
+el dto `StudentResponse` que hemos creado, pero podríamos usar el propio dominio `Student`, eso va a depender de cómo
+queremos manejarlo y qué información queremos exponer. Sin embargo, por ningún motivo debemos enviar como respuesta las
+entidades de la aplicación `StudentEntity`, ni mucho menos usarlos como parámetros de los métodos de los endpoints.
+
+````java
+
+@RequiredArgsConstructor
+@RestController
+@RequestMapping(path = "/api/v1/students")
+public class StudentRestAdapter {
+
+    private final StudentServicePort studentServicePort;
+    private final StudentRestMapper studentRestMapper;
+
+    @GetMapping
+    public ResponseEntity<List<StudentResponse>> findAllStudents() {
+        List<StudentResponse> studentResponses = this.studentRestMapper.toStudentResponseList(this.studentServicePort.findAllStudents());
+        return ResponseEntity.ok(studentResponses);
+    }
+
+    @GetMapping(path = "/{studentId}")
+    public ResponseEntity<StudentResponse> findStudent(@PathVariable Long studentId) {
+        Student student = this.studentServicePort.findStudentById(studentId);
+        return ResponseEntity.ok(this.studentRestMapper.toStudentResponse(student));
+    }
+
+    @PostMapping
+    public ResponseEntity<StudentResponse> saveStudent(@Valid @RequestBody StudentCreateRequest studentCreateRequest) {
+        Student student = this.studentRestMapper.toStudent(studentCreateRequest);
+        Student studentDB = this.studentServicePort.saveStudent(student);
+        URI uri = URI.create("/api/v1/students/" + studentDB.getId());
+        return ResponseEntity.created(uri).body(this.studentRestMapper.toStudentResponse(studentDB));
+    }
+
+    /**
+     * Para este caso particular el dto StudentCreateRequest, será el mismo que usamos en el endpoint saveStudent().
+     * Sin embargo, podríamos crear un dto exclusivo para este updateStudent(), 
+     * todo va a depender de qué campos consideramos deben ser actualizables.
+     */
+    @PutMapping(path = "/{studentId}")
+    public ResponseEntity<StudentResponse> updateStudent(@Valid @RequestBody StudentCreateRequest studentCreateRequest, @PathVariable Long studentId) {
+        Student student = this.studentRestMapper.toStudent(studentCreateRequest);
+        Student studentDB = this.studentServicePort.updateStudent(studentId, student);
+        return ResponseEntity.ok(this.studentRestMapper.toStudentResponse(studentDB));
+    }
+
+    @DeleteMapping(path = "/{studentId}")
+    public ResponseEntity<Void> deleteStudent(@PathVariable Long studentId) {
+        this.studentServicePort.deleteStudentById(studentId);
+        return ResponseEntity.noContent().build();
+    }
+}
+````
+
