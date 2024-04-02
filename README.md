@@ -524,3 +524,98 @@ public class StudentRestAdapter {
 }
 ````
 
+---
+
+# Manejo de excepciones
+
+---
+
+## Catálogo de errores
+
+Para el manejo de excepciones crearemos en primer lugar nuestro catálogo de errores. En este catálogo se irán definiendo
+una serie de códigos de errores personalizados que asignaremos a ciertos errores que puedan ocurrir:
+
+````java
+
+@Getter
+public enum ErrorCatalog {
+
+    STUDENT_NOT_FOUND("ERR_STUDENT_001", "Estudiante no encontrado."),
+    INVALID_STUDENT("ERR_STUDENT_002", "Parámetros inválidos del estudiante."),
+    GENERIC_ERROR("ERR_GEN_001", "Ocurrió un error inesperado");
+
+    private final String code;
+    private final String message;
+
+    ErrorCatalog(String code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+}
+````
+
+## Modelo de respuesta
+
+Crearemos nuestro modelo de respuesta, es decir, cada vez que ocurra un error, nuestro backend enviará al cliente
+siempre el mismo formato de respuesta para que haya uniformidad:
+
+````java
+
+@Builder
+@Getter
+@Setter
+public class ErrorResponse {
+    private String code;
+    private String message;
+    private List<String> details;
+    private LocalDateTime timestamp;
+}
+````
+
+## Rest Controller Advice
+
+La clase de controlador de errores globales las colocaremos junto a nuestro controlador `StudentRestAdapter`, ya que
+en teoría también es un controlador pero de errores:
+
+````java
+
+@RestControllerAdvice
+public class GlobalControllerAdvice {
+
+    @ExceptionHandler(StudentNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleStudentNotFoundException() {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code(ErrorCatalog.STUDENT_NOT_FOUND.getCode())
+                .message(ErrorCatalog.STUDENT_NOT_FOUND.getMessage())
+                .timestamp(LocalDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentNotValidException(MethodArgumentNotValidException exception) {
+        BindingResult bindingResult = exception.getBindingResult();
+        List<String> fieldErrorsList = bindingResult.getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage).toList();
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code(ErrorCatalog.INVALID_STUDENT.getCode())
+                .message(ErrorCatalog.INVALID_STUDENT.getMessage())
+                .details(fieldErrorsList)
+                .timestamp(LocalDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception exception) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .code(ErrorCatalog.GENERIC_ERROR.getCode())
+                .message(ErrorCatalog.GENERIC_ERROR.getMessage())
+                .details(Collections.singletonList(exception.getMessage()))
+                .timestamp(LocalDateTime.now())
+                .build();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+    }
+}
+````
