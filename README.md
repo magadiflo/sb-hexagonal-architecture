@@ -276,3 +276,113 @@ public class StudentService implements StudentServicePort {
     }
 }
 ````
+
+---
+
+# INFRASTRUCTURE
+
+---
+
+En esta capa vamos a definir los elementos de salida y entrada a nuestra aplicación. Empezaremos creando las entidades,
+mismos que serán usados para poder almacenar los datos en la base de datos.
+
+## Entidades
+
+````java
+
+@Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Table(name = "students")
+public class StudentEntity {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private Integer age;
+    private String address;
+}
+````
+
+## Repositorio
+
+Crearemos la interfaz de repositorio que al extender de la interfaz de Spring Boot Data JPA, nos permitirá interactuar
+con la entidad `StudentEntity` y la base de datos:
+
+````java
+public interface StudentRepository extends JpaRepository<StudentEntity, Long> {
+}
+````
+
+## Mapper
+
+Recordemos que en el `pom.xml` hemos agregado la dependencia del `mapstruct`, esta dependencia nos permitirá establecer
+el mapeo entre el dominio y las clases de entidad. Así que ahora necesitamos crear una interfaz al que le
+agregaremos la anotación `@Mapper(componentModel = "spring")`, esta anotación nos permite decirle a spring que inyecte
+esta interfaz como un componente de spring.
+
+````java
+
+@Mapper(componentModel = "spring") // Permite que esta interfaz se inyecte como un componente de Spring
+public interface StudentPersistentMapper {
+
+    // Convertirá un Student en un StudentEntity. Como ambas clases tienen los mismos atributos, no es necesario
+    // agregar anotaciones adicionales. Si tuvieran campos distintos podríamos usar por ejemplo:
+    // @Mapping(target = "age", source = "edad")
+    StudentEntity toStudentEntity(Student student);
+
+    Student toStudent(StudentEntity entity);
+
+    List<Student> toStudentList(List<StudentEntity> studentEntityList);
+}
+````
+
+## Implementación del puerto de salida (output) de la capa de aplicación
+
+En la capa de aplicación definimos una interfaz como puerto de salida (output) llamada `StudentPersistentPort`. Esta
+interfaz está siendo inyectada la clase `StudentService` de la misma capa de aplicación, eso significa que, esa clase
+está esperando una implementación concreta de la interfaz `StudentPersistentPort`, es por eso que ahora en esta capa de
+aplicación realizamos la implementación concreta de dicha interfaz:
+
+````java
+
+@RequiredArgsConstructor
+@Service
+public class StudentPersistentAdapter implements StudentPersistentPort {
+
+    private final StudentRepository studentRepository;
+    private final StudentPersistentMapper studentPersistentMapper;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Student> findAllStudents() {
+        List<StudentEntity> studentEntityList = this.studentRepository.findAll();
+        return this.studentPersistentMapper.toStudentList(studentEntityList);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Student> findStudentById(Long id) {
+        return this.studentRepository.findById(id)
+                .map(this.studentPersistentMapper::toStudent);
+    }
+
+    @Override
+    @Transactional
+    public Student saveStudent(Student student) {
+        StudentEntity studentEntity = this.studentPersistentMapper.toStudentEntity(student);
+        StudentEntity studentSaved = this.studentRepository.save(studentEntity);
+        return this.studentPersistentMapper.toStudent(studentSaved);
+    }
+
+    @Override
+    @Transactional
+    public void deleteStudentById(Long id) {
+        this.studentRepository.deleteById(id);
+    }
+}
+````
