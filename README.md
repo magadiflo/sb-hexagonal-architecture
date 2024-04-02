@@ -619,3 +619,117 @@ public class GlobalControllerAdvice {
     }
 }
 ````
+
+## Creando data.sql
+
+Para poblar nuestra tabla `students` crearemos el archivo `data.sql` en el directorio `/resources`, pero hay que tener
+en cuenta que para que este archivo se ejecute correctamente se debe agregar las siguientes dos
+configuraciones: `spring.jpa.defer-datasource-initialization=true` y `spring.sql.init.mode=always`.
+
+Es importante tener en cuenta además, que usaremos la configuración `ddl-auto=create`, para que cada vez que la
+aplicación se levante se eliminen las tablas existentes y se vuelva a crear y además se pueblen nuevamente con los
+datos del `data.sql`:
+
+````sql
+INSERT INTO students(first_name, last_name, age, address)
+VALUES('Martín', 'Díaz', 35, 'Chimbote'),
+('Melissa', 'Peralta', 25, 'Lima'),
+('Arely', 'Culqui', 20, 'Ayacucho'),
+('Karen', 'Caldas', 32, 'Trujillo'),
+('Carmen', 'Vega', 31, 'Cajamarca');
+````
+
+## Configura application.yml
+
+````yml
+server:
+  port: 8080
+  error:
+    include-message: always
+
+spring:
+  application:
+    name: sb-hexagonal-architecture
+
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        format_sql: true
+
+  jackson:
+    default-property-inclusion: non_null
+    property-naming-strategy: SNAKE_CASE
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG
+````
+
+- La configuración `spring.jackson.default-property-inclusion=non_null` se refiere a la forma en que Jackson (la
+  biblioteca utilizada para la serialización y deserialización de objetos JSON en Spring) maneja la inclusión de
+  propiedades en la serialización de objetos Java a JSON.
+  <br><br>
+  Cuando se establece esta propiedad en `non_null`, significa que **Jackson solo incluirá en la representación JSON
+  aquellas propiedades de un objeto Java que no sean nulas.** Es decir, las propiedades que tengan un valor distinto de
+  nulo se incluirán en el JSON resultante, mientras que **aquellas con valor nulo no se mostrarán en la salida JSON.**
+  <br><br>
+  La configuración `spring.jackson.default-property-inclusion=non_null` es equivalente a utilizar la
+  anotación `@JsonInclude(JsonInclude.Include.NON_NULL)` a nivel de clase en las clases de tu aplicación de Spring Boot.
+  <br><br>
+  **En este proyecto se opta por usar la configuración en el `application.yml` para evitar estar colocando la anotación
+  en cada clase que vaya a ser transformado a `JSON`.**
+  <br><br>
+- `spring.jackson.property-naming-strategy=SNAKE_CASE`, especifica la **estrategia de nomenclatura que se utilizará al
+  serializar y deserializar objetos Java a JSON** utilizando Jackson.
+  <br><br>
+  Cuando se configura como `SNAKE_CASE`, Jackson convertirá automáticamente los nombres de las propiedades de los
+  objetos Java a notación `snake_case` antes de serializarlos a JSON. Esto significa que **las propiedades se
+  convertirán de `camelCase` (por ejemplo, `miPropiedad`) a `snake_case` (por ejemplo, `mi_propiedad`) en el JSON
+  resultante.**
+  <br><br>
+  Con la configuración `SNAKE_CASE`, si nuestra aplicación recibe un objeto `JSON`, `Jackson` esperará que las
+  propiedades del objeto `JSON` estén en formato `snake_case`. `Jackson` las convertirá a camelCase para que coincidan
+  con las propiedades de tu objeto Java durante el proceso de de-serialización.
+  <br><br>
+- `spring.jpa.defer-datasource-initialization=true`, de forma predeterminada, los scripts `data.sql` se ejecutan antes
+  de que se inicialice Hibernate. **Necesitamos Hibernate para crear nuestras tablas antes de insertar los datos en
+  ellas. Para lograr esto, necesitamos diferir la inicialización de nuestra fuente de datos.** En ese sentido, usaremos
+  la siguiente propiedad para lograr eso.
+  <br><br>
+- `spring.sql.init.mode=always`, tenga en cuenta que para cualquier inicialización basada en script, es decir, insertar
+  datos mediante `data.sql` o crear un esquema mediante `schema.sql`, debemos establecer esta propiedad. Sin embargo,
+  para bases de datos embebidas como `H2`, esta configuración no es necesaria, dado que está configurado en `always`
+  por defecto.
+
+## Variables de entorno
+
+Vamos a crear el archivo `.env` en la raíz del proyecto donde agregaremos nuestras variables de entorno. Si vemos el
+archivo `application.yml` observaremos que estamos haciendo uso de tres variables de entorno para la configuración de
+la base de datos: `${DATABASE_URL}`, `${DATABASE_USERNAME}`, `${DATABASE_PASSWORD}`.
+
+Ahora, en el archivo `.env` definimos las variables de entorno con sus valores:
+
+````properties
+DATABASE_URL=jdbc:postgresql://localhost:5432/db_hexagonal_architecture
+DATABASE_USERNAME=postgres
+DATABASE_PASSWORD=magadiflo
+````
+
+## Configurando variables de entorno
+
+Para usar las variables de entorno del archivo `.env` en nuestro proyecto de Spring Boot, utilizaremos nuestro IDE
+`IDE IntelliJ IDEA` para poder seleccionar y usar el archivo `.env`:
+
+![configure .env](./assets/01.configure-env.png)
