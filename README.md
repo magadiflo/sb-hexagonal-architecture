@@ -733,3 +733,195 @@ Para usar las variables de entorno del archivo `.env` en nuestro proyecto de Spr
 `IDE IntelliJ IDEA` para poder seleccionar y usar el archivo `.env`:
 
 ![configure .env](./assets/01.configure-env.png)
+
+## Ejecutando aplicación (lado positivo)
+
+### Listar estudiantes
+
+````bash
+$ curl -v http://localhost:8080/api/v1/students | jq
+
+>
+< HTTP/1.1 200
+< Content-Type: application/json
+<
+[
+  {
+    "id": 1,
+    "first_name": "Martín",
+    "last_name": "Díaz",
+    "age": 35,
+    "address": "Chimbote"
+  },
+  {
+    "id": 2,
+    "first_name": "Melissa",
+    "last_name": "Peralta",
+    "age": 25,
+    "address": "Lima"
+  },
+  {
+    "id": 3,
+    "first_name": "Arely",
+    "last_name": "Culqui",
+    "age": 20,
+    "address": "Ayacucho"
+  },
+  {
+    "id": 4,
+    "first_name": "Karen",
+    "last_name": "Caldas",
+    "age": 32,
+    "address": "Trujillo"
+  },
+  {
+    "id": 5,
+    "first_name": "Carmen",
+    "last_name": "Vega",
+    "age": 31,
+    "address": "Cajamarca"
+  }
+]
+````
+
+### Buscar estudiante por su id
+
+````bash
+$ curl -v http://localhost:8080/api/v1/students/2 | jq
+
+>
+< HTTP/1.1 200
+<
+{
+  "id": 2,
+  "first_name": "Melissa",
+  "last_name": "Peralta",
+  "age": 25,
+  "address": "Lima"
+}
+````
+
+### Guardar estudiante
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"first_name\": \"Alicia\", \"last_name\": \"Mendez\", \"age\": 40, \"address\": \"Cusco\"}" http://localhost:8080/api/v1/students | jq
+
+< HTTP/1.1 201
+< Location: /api/v1/students/6
+<
+{
+  "id": 6,
+  "first_name": "Alicia",
+  "last_name": "Mendez",
+  "age": 40,
+  "address": "Cusco"
+}
+````
+
+### Actualizar estudiante
+
+````bash
+$ curl -v -X PUT -H "Content-Type: application/json" -d "{\"first_name\": \"Sandra\", \"last_name\": \"Pardo\", \"age\": 25, \"address\": \"Cusco\"}" http://localhost:8080/api/v1/students/6 | jq
+
+< HTTP/1.1 200
+<
+{
+  "id": 6,
+  "first_name": "Sandra",
+  "last_name": "Pardo",
+  "age": 25,
+  "address": "Cusco"
+}
+````
+
+### Eliminar estudiante
+
+````bash
+$ curl -v -X DELETE http://localhost:8080/api/v1/students/6 | jq
+
+>
+< HTTP/1.1 204
+````
+
+## Ejecutando aplicación (mostrando errores)
+
+### Buscar estudiante por un id no existente
+
+````bash
+$ curl -v http://localhost:8080/api/v1/students/20 | jq
+
+>
+< HTTP/1.1 404
+<
+{
+  "code": "ERR_STUDENT_001",
+  "message": "Estudiante no encontrado.",
+  "timestamp": "2024-04-02T12:58:29.9104659"
+}
+````
+
+### Guardar estudiante con campos inválidos
+
+````bash
+$ curl -v -X POST -H "Content-Type: application/json" -d "{\"last_name\": \"Mendez\", \"age\": 40, \"address\": \"\"}" http://localhost:8080/api/v1/students | jq
+
+< HTTP/1.1 400
+<
+{
+  "code": "ERR_STUDENT_002",
+  "message": "Parámetros inválidos del estudiante.",
+  "details": [
+    "El campo firstName no puede estar vacío o ser nulo",
+    "El campo address no puede estar vacío o ser nulo"
+  ],
+  "timestamp": "2024-04-02T12:57:42.2344671"
+}
+````
+
+### Actualizar estudiante con id no existente
+
+````bash
+$ curl -v -X PUT -H "Content-Type: application/json" -d "{\"first_name\": \"Sandra\", \"last_name\": \"Pardo\", \"age\": 25, \"address\": \"Cusco\"}" http://localhost:8080/api/v1/students/6 | jq
+
+< HTTP/1.1 404
+<
+{
+  "code": "ERR_STUDENT_001",
+  "message": "Estudiante no encontrado.",
+  "timestamp": "2024-04-02T12:55:54.4984721"
+}
+````
+
+### Actualizar estudiante con campos inválidos
+
+````bash
+$ curl -v -X PUT -H "Content-Type: application/json" -d "{\"first_name\": \"Sandra\"}" http://localhost:8080/api/v1/students/1 | jq
+
+< HTTP/1.1 400
+<
+{
+  "code": "ERR_STUDENT_002",
+  "message": "Parámetros inválidos del estudiante.",
+  "details": [
+    "El campo age no puede ser nulo",
+    "El campo lastName no puede estar vacío o ser nulo",
+    "El campo address no puede estar vacío o ser nulo"
+  ],
+  "timestamp": "2024-04-02T12:56:23.4534705"
+}
+````
+
+### Eliminar estudiante con id no existente
+
+````bash
+$ curl -v -X DELETE http://localhost:8080/api/v1/students/6 | jq
+
+>
+< HTTP/1.1 404
+<
+{
+  "code": "ERR_STUDENT_001",
+  "message": "Estudiante no encontrado.",
+  "timestamp": "2024-04-02T12:55:23.9754641"
+}
+````
