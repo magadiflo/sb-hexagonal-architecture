@@ -4,6 +4,35 @@ Tutorial tomado del canal de youtube de **Dev Dominio**
 
 ---
 
+## Arquitectura en Capas vs Arquitectura Hexagonal
+
+A continuación mostraré las clases e interfaces más importante sobre las que se sustenta las distintas arquitectura.
+Esto lo hago con la finalidad de tener una visión de cómo es que las clases e interfaces interactúan entre sí
+dependiendo de la arquitectura.
+
+### Arquitectura de capas
+
+En este ejemplo, he querido representar cómo es que se crearía un CRUD de la entidad llamada Author. Aquí observamos
+los típicos paquetes que se crean en una aplicación de Spring Boot: `Entity`, `Repository`, `Service` y `Controller`.
+Obviamente, hay muchas otras clases, como los dtos, mensajes de errores, excepciones, utilidades, etc. por eso es
+que menciono que estamos representando las clases e interfaces principales.
+
+![capas](./assets/02.capas.bmp)
+
+### Arquitectura hexagonal
+
+En esta arquitectura mostramos los paquetes: `domain`, `application` y `infrastructure`. Vemos que la estructura
+**es muy distinta a la arquitectura en capas**.
+
+`La arquitectura hexagonal`, también conocida como arquitectura de puertos y adaptadores, es un patrón de diseño de
+software que tiene como objetivo principal separar las responsabilidades de cada componente de un sistema. Esta
+arquitectura se basa en la idea de que las aplicaciones deben ser independientes de la tecnología subyacente y, por lo
+tanto, fácilmente intercambiables.
+
+Nuevamente hago hincapié en que en el diagrama solo muestro las clases e interfaces más representativas.
+
+![hexagonal](./assets/03.arquitectura-hexagonal.bmp)
+
 ## Dependencias
 
 Notar que estamos especificando la versión de `Lombook` y la de `MapStruct`, dado que al tener ambas librerías en el
