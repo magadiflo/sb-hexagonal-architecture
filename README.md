@@ -4,13 +4,13 @@ Tutorial tomado del canal de youtube de **Dev Dominio**
 
 ---
 
-## Arquitectura en Capas vs Arquitectura Hexagonal
+# Arquitectura en Capas vs Arquitectura Hexagonal
 
 A continuación mostraré las clases e interfaces más importante sobre las que se sustenta las distintas arquitectura.
 Esto lo hago con la finalidad de tener una visión de cómo es que las clases e interfaces interactúan entre sí
 dependiendo de la arquitectura.
 
-### Arquitectura de capas
+## Arquitectura de capas
 
 En este ejemplo, he querido representar cómo es que se crearía un CRUD de la entidad llamada Author. Aquí observamos
 los típicos paquetes que se crean en una aplicación de Spring Boot: `Entity`, `Repository`, `Service` y `Controller`.
@@ -19,7 +19,7 @@ que menciono que estamos representando las clases e interfaces principales.
 
 ![capas](./assets/02.capas.bmp)
 
-### Arquitectura hexagonal
+## Arquitectura hexagonal de este proyecto
 
 En esta arquitectura mostramos los paquetes: `domain`, `application` y `infrastructure`. Vemos que la estructura
 **es muy distinta a la arquitectura en capas**.
@@ -29,9 +29,22 @@ software que tiene como objetivo principal separar las responsabilidades de cada
 arquitectura se basa en la idea de que las aplicaciones deben ser independientes de la tecnología subyacente y, por lo
 tanto, fácilmente intercambiables.
 
-Nuevamente hago hincapié en que en el diagrama solo muestro las clases e interfaces más representativas.
+Nuevamente, hago hincapié en que en el diagrama solo muestro las clases e interfaces más representativas.
 
 ![hexagonal](./assets/03.arquitectura-hexagonal.bmp)
+
+## [Ejemplo de una Arquitectura Hexagonal](https://www.youtube.com/watch?v=eZxi99c9UWM)
+
+Revisando videos me topé con este ejemplo de `Arquitectura Hexagonal`. A continuación muestro el diagrama realizado
+en base a la arquitectura hexagonal mostrada en este otro proyecto. Lo muestro aquí para tener una referencia de ver
+que existe esta otra manera de implementar, aunque **básicamente es lo mismo que implementaremos en nuestro proyecto
+`sb-hexagonal-architecture`**.
+
+**Si damos click en la imagen nos llevará al repositorio**
+
+[![00.hexagonal-architecture-sample.bmp](./assets/00.hexagonal-architecture-sample.bmp)](https://github.com/JamiltonQuintero/NotModularHexagonalArquitecture)
+
+---
 
 ## Dependencias
 
